@@ -6,10 +6,10 @@ import songAsset from "@/assets/song.mp3.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Xasan & Dilfuza — To'y taklifnomasi" },
-      { name: "description", content: "28-iyun 2026-yil, 18:00, Jasmin To'yxonasi. Sizni to'y marosimimizga taklif qilamiz." },
-      { property: "og:title", content: "Xasan & Dilfuza" },
-      { property: "og:description", content: "28.06.2026 — Jasmin To'yxonasi" },
+      { title: "Sherzod & Kumush — To'y taklifnomasi" },
+      { name: "description", content: "29-oktabr 2026-yil, 18:00, Jasmin To'yxonasi. Sizni to'y marosimimizga taklif qilamiz." },
+      { property: "og:title", content: "Sherzod & Kumush" },
+      { property: "og:description", content: "29.10.2026 — Jasmin To'yxonasi" },
       { property: "og:image", content: coupleAsset.url },
     ],
     links: [
@@ -24,9 +24,20 @@ export const Route = createFileRoute("/")({
   component: Invitation,
 });
 
-const WEDDING_DATE = new Date("2026-06-28T18:00:00+05:00");
+const WEDDING_DATE = new Date("2026-10-29T18:00:00+05:00");
+const RSVP_STORAGE_KEY = "wedding-rsvp-sherzod-kumush";
+const ADMIN_PASSWORD = "1317";
+const WI_URL = "https://webinvite-six.vercel.app/";
 
 type Lang = "uz" | "ru" | "en";
+
+type RsvpEntry = {
+  id: string;
+  name: string;
+  attending: "yes" | "no";
+  guests: number;
+  createdAt: string;
+};
 
 const T: Record<Lang, Record<string, string>> = {
   uz: {
@@ -55,6 +66,23 @@ const T: Record<Lang, Record<string, string>> = {
     closingDesc: "biz uchun eng qimmatli sovg'a!",
     months: "Yanvar Fevral Mart Aprel May Iyun Iyul Avgust Sentyabr Oktyabr Noyabr Dekabr",
     weekdays: "Du Se Ch Pa Ju Sh Ya",
+    rsvp: "TAKLIFNI TASDIQLASH",
+    rsvpDesc: "Iltimos, kelishingizni oldindan bildiring",
+    yourName: "Ismingiz",
+    attending: "Kelasizmi?",
+    yes: "Ha, albatta",
+    no: "Afsuski, yo'q",
+    guestsCount: "Mehmonlar soni",
+    submit: "YUBORISH",
+    submitted: "Rahmat! Javobingiz qabul qilindi ♡",
+    adminTitle: "Admin panel",
+    passwordLabel: "Parol",
+    enter: "KIRISH",
+    wrongPassword: "Noto'g'ri parol",
+    close: "Yopish",
+    noSubmissions: "Hozircha javoblar yo'q",
+    totalGuests: "Jami mehmonlar",
+    totalResponses: "Javoblar",
   },
   ru: {
     invitation: "ВЫ ПОЛУЧИЛИ ПРИГЛАШЕНИЕ",
@@ -82,6 +110,23 @@ const T: Record<Lang, Record<string, string>> = {
     closingDesc: "лучший подарок для нас!",
     months: "Январь Февраль Март Апрель Май Июнь Июль Август Сентябрь Октябрь Ноябрь Декабрь",
     weekdays: "Пн Вт Ср Чт Пт Сб Вс",
+    rsvp: "ПОДТВЕРДИТЕ ПРИСУТСТВИЕ",
+    rsvpDesc: "Пожалуйста, сообщите заранее",
+    yourName: "Ваше имя",
+    attending: "Придёте?",
+    yes: "Да, обязательно",
+    no: "К сожалению, нет",
+    guestsCount: "Количество гостей",
+    submit: "ОТПРАВИТЬ",
+    submitted: "Спасибо! Ваш ответ принят ♡",
+    adminTitle: "Админ-панель",
+    passwordLabel: "Пароль",
+    enter: "ВОЙТИ",
+    wrongPassword: "Неверный пароль",
+    close: "Закрыть",
+    noSubmissions: "Пока нет ответов",
+    totalGuests: "Всего гостей",
+    totalResponses: "Ответов",
   },
   en: {
     invitation: "YOU HAVE RECEIVED AN INVITATION",
@@ -109,6 +154,23 @@ const T: Record<Lang, Record<string, string>> = {
     closingDesc: "is the most important gift for us!",
     months: "January February March April May June July August September October November December",
     weekdays: "Mon Tue Wed Thu Fri Sat Sun",
+    rsvp: "CONFIRM YOUR PRESENCE",
+    rsvpDesc: "Please let us know in advance",
+    yourName: "Your name",
+    attending: "Will you attend?",
+    yes: "Yes, of course",
+    no: "Unfortunately, no",
+    guestsCount: "Number of guests",
+    submit: "SUBMIT",
+    submitted: "Thank you! Your response has been received ♡",
+    adminTitle: "Admin panel",
+    passwordLabel: "Password",
+    enter: "ENTER",
+    wrongPassword: "Wrong password",
+    close: "Close",
+    noSubmissions: "No responses yet",
+    totalGuests: "Total guests",
+    totalResponses: "Responses",
   },
 };
 
@@ -131,6 +193,20 @@ function useCountdown(enabled: boolean) {
     minutes: Math.floor((diff / 60000) % 60),
     seconds: Math.floor((diff / 1000) % 60),
   };
+}
+
+function loadRsvps(): RsvpEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(RSVP_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as RsvpEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRsvps(list: RsvpEntry[]) {
+  window.localStorage.setItem(RSVP_STORAGE_KEY, JSON.stringify(list));
 }
 
 function Petals() {
@@ -237,12 +313,13 @@ function LangSwitch({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void 
   );
 }
 
-function CalendarJun2026({ weekdays, monthName }: { weekdays: string; monthName: string }) {
-  // June 2026: 1st is Monday. 30 days.
+function CalendarOct2026({ weekdays, monthName }: { weekdays: string; monthName: string }) {
+  // October 2026: 1st is Thursday. 31 days. Weekdays start Monday, so offset = 3.
   const wd = weekdays.split(/\s+/);
-  const days: (number | null)[] = [];
-  // June 1, 2026 = Monday => offset 0
-  for (let i = 0; i < 30; i++) days.push(i + 1);
+  const OFFSET = 3;
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < OFFSET; i++) cells.push(null);
+  for (let i = 1; i <= 31; i++) cells.push(i);
   return (
     <div className="mx-auto max-w-xs rounded-2xl border border-[var(--gold)]/25 bg-card/40 p-5 backdrop-blur">
       <p className="text-center text-sm tracking-[0.4em] text-[var(--gold)]">
@@ -253,19 +330,205 @@ function CalendarJun2026({ weekdays, monthName }: { weekdays: string; monthName:
         {wd.map((d) => <div key={d} className="py-1">{d}</div>)}
       </div>
       <div className="mt-1 grid grid-cols-7 gap-1 text-center text-sm">
-        {days.map((d) => (
+        {cells.map((d, i) => (
           <div
-            key={d}
+            key={i}
             className={`grid h-8 w-8 mx-auto place-items-center rounded-full ${
-              d === 28
+              d === 29
                 ? "bg-[var(--gold)] text-[var(--primary-foreground)] font-semibold shadow-[0_0_20px_oklch(0.82_0.13_80/0.5)]"
-                : "text-foreground/80"
+                : d
+                ? "text-foreground/80"
+                : ""
             }`}
           >
-            {d}
+            {d ?? ""}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function RsvpForm({ t, onSubmit }: { t: Record<string, string>; onSubmit: (e: RsvpEntry) => void }) {
+  const [name, setName] = useState("");
+  const [attending, setAttending] = useState<"yes" | "no">("yes");
+  const [count, setCount] = useState(1);
+  const [done, setDone] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    const entry: RsvpEntry = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      attending,
+      guests: Math.max(1, Math.min(20, Number(count) || 1)),
+      createdAt: new Date().toISOString(),
+    };
+    onSubmit(entry);
+    setDone(true);
+  };
+
+  if (done) {
+    return (
+      <div className="rounded-3xl border border-[var(--gold)]/30 bg-card/50 p-8 text-center backdrop-blur">
+        <Heart />
+        <p className="mt-4 font-display text-2xl italic text-[var(--gold)] md:text-3xl">{t.submitted}</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="rounded-3xl border border-[var(--gold)]/25 bg-card/50 p-6 backdrop-blur md:p-8 text-left space-y-5">
+      <div>
+        <label className="mb-2 block text-[11px] tracking-[0.3em] text-[var(--gold)]">{t.yourName}</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          maxLength={80}
+          className="w-full rounded-xl border border-[var(--gold)]/30 bg-background/60 px-4 py-3 text-foreground outline-none focus:border-[var(--gold)]"
+        />
+      </div>
+      <div>
+        <label className="mb-2 block text-[11px] tracking-[0.3em] text-[var(--gold)]">{t.attending}</label>
+        <div className="grid grid-cols-2 gap-2">
+          {(["yes", "no"] as const).map((v) => (
+            <button
+              type="button"
+              key={v}
+              onClick={() => setAttending(v)}
+              className={`rounded-xl border px-4 py-3 text-sm transition ${
+                attending === v
+                  ? "border-[var(--gold)] bg-[var(--gold)]/15 text-[var(--gold)]"
+                  : "border-border bg-background/40 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {v === "yes" ? t.yes : t.no}
+            </button>
+          ))}
+        </div>
+      </div>
+      {attending === "yes" && (
+        <div>
+          <label className="mb-2 block text-[11px] tracking-[0.3em] text-[var(--gold)]">{t.guestsCount}</label>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            className="w-full rounded-xl border border-[var(--gold)]/30 bg-background/60 px-4 py-3 text-foreground outline-none focus:border-[var(--gold)]"
+          />
+        </div>
+      )}
+      <button
+        type="submit"
+        className="w-full rounded-full bg-[var(--gold)] py-3 text-sm tracking-[0.3em] text-[var(--primary-foreground)] shadow-lg transition hover:scale-[1.02]"
+      >
+        {t.submit}
+      </button>
+    </form>
+  );
+}
+
+function AdminPanel({ t, onClose }: { t: Record<string, string>; onClose: () => void }) {
+  const [entries, setEntries] = useState<RsvpEntry[]>([]);
+  useEffect(() => setEntries(loadRsvps()), []);
+  const totalGuests = entries.filter((e) => e.attending === "yes").reduce((a, b) => a + b.guests, 0);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur">
+      <div className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--gold)]/40 bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[var(--gold)]/20 p-5">
+          <h3 className="font-display text-2xl italic text-[var(--gold)]">{t.adminTitle}</h3>
+          <button onClick={onClose} className="rounded-full border border-border px-4 py-1.5 text-xs tracking-wider text-muted-foreground hover:text-foreground">
+            {t.close}
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3 border-b border-[var(--gold)]/20 p-5 text-center">
+          <div>
+            <div className="gold-text font-display text-3xl">{entries.length}</div>
+            <div className="text-[10px] tracking-widest text-muted-foreground">{t.totalResponses}</div>
+          </div>
+          <div>
+            <div className="gold-text font-display text-3xl">{totalGuests}</div>
+            <div className="text-[10px] tracking-widest text-muted-foreground">{t.totalGuests}</div>
+          </div>
+        </div>
+        <div className="max-h-[55vh] overflow-y-auto p-5">
+          {entries.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">{t.noSubmissions}</p>
+          ) : (
+            <ul className="space-y-3">
+              {entries.slice().reverse().map((e) => (
+                <li key={e.id} className="rounded-xl border border-border bg-background/60 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-display text-lg text-foreground">{e.name}</div>
+                      <div className="mt-0.5 text-[11px] tracking-wider text-muted-foreground">
+                        {new Date(e.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`inline-block rounded-full px-3 py-1 text-[10px] tracking-widest ${
+                        e.attending === "yes"
+                          ? "bg-[var(--gold)]/15 text-[var(--gold)]"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {e.attending === "yes" ? t.yes : t.no}
+                      </span>
+                      {e.attending === "yes" && (
+                        <div className="mt-1 text-xs text-muted-foreground">× {e.guests}</div>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminGate({ t, onClose, onSuccess }: { t: Record<string, string>; onClose: () => void; onSuccess: () => void }) {
+  const [pwd, setPwd] = useState("");
+  const [err, setErr] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwd.trim() === ADMIN_PASSWORD) {
+      onSuccess();
+    } else {
+      setErr(true);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur">
+      <form onSubmit={submit} className="w-full max-w-sm rounded-3xl border border-[var(--gold)]/40 bg-card p-6 shadow-2xl">
+        <h3 className="text-center font-display text-2xl italic text-[var(--gold)]">{t.adminTitle}</h3>
+        <label className="mt-6 block text-[11px] tracking-[0.3em] text-[var(--gold)]">{t.passwordLabel}</label>
+        <input
+          type="password"
+          value={pwd}
+          onChange={(e) => { setPwd(e.target.value); setErr(false); }}
+          autoFocus
+          className="mt-2 w-full rounded-xl border border-[var(--gold)]/30 bg-background/60 px-4 py-3 text-foreground outline-none focus:border-[var(--gold)]"
+        />
+        {err && <p className="mt-2 text-xs text-red-400">{t.wrongPassword}</p>}
+        <div className="mt-5 flex gap-2">
+          <button type="button" onClick={onClose} className="flex-1 rounded-full border border-border py-3 text-xs tracking-wider text-muted-foreground hover:text-foreground">
+            {t.close}
+          </button>
+          <button type="submit" className="flex-1 rounded-full bg-[var(--gold)] py-3 text-xs tracking-[0.3em] text-[var(--primary-foreground)]">
+            {t.enter}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -277,6 +540,16 @@ function Invitation() {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const countdown = useCountdown(unlocked);
+  const [rsvps, setRsvps] = useState<RsvpEntry[]>([]);
+  const [adminStage, setAdminStage] = useState<"closed" | "gate" | "open">("closed");
+
+  useEffect(() => { setRsvps(loadRsvps()); }, []);
+
+  const addRsvp = (entry: RsvpEntry) => {
+    const next = [...rsvps, entry];
+    setRsvps(next);
+    saveRsvps(next);
+  };
 
   const togglePlay = () => {
     const a = audioRef.current;
@@ -294,7 +567,7 @@ function Invitation() {
     }, 100);
   };
 
-  const monthName = t.months.split(" ")[5]; // June
+  const monthName = t.months.split(" ")[9]; // October
 
   return (
     <main className="relative overflow-hidden bg-background text-foreground">
@@ -318,11 +591,11 @@ function Invitation() {
             {t.invitation}
           </p>
           <h1 className="mt-10 font-display text-5xl leading-tight text-foreground md:text-7xl">
-            Xasan <span className="gold-text italic">&</span> Dilfuza
+            Sherzod <span className="gold-text italic">&</span> Kumush
           </h1>
           <div className="mt-8 flex items-center justify-center gap-4 text-[var(--gold)]">
             <span className="h-px w-10 bg-[var(--gold)]/50" />
-            <p className="text-sm tracking-[0.5em]">28 · 06 · 2026</p>
+            <p className="text-sm tracking-[0.5em]">29 · 10 · 2026</p>
             <span className="h-px w-10 bg-[var(--gold)]/50" />
           </div>
           <p className="mt-10 font-arabic text-3xl text-[var(--gold)] md:text-4xl" style={{ fontFamily: 'Amiri, serif' }}>
@@ -366,7 +639,7 @@ function Invitation() {
                 <div className="absolute -inset-1 rounded-[1.7rem] border border-[var(--gold)]/50" />
                 <img
                   src={coupleAsset.url}
-                  alt="Xasan & Dilfuza"
+                  alt="Sherzod & Kumush"
                   className="relative h-auto w-full rounded-[1.5rem] object-cover shadow-2xl"
                 />
               </div>
@@ -378,11 +651,11 @@ function Invitation() {
             <div className="mx-auto max-w-xl text-center">
               <p className="text-[11px] tracking-[0.5em] text-[var(--gold)]">{t.date}</p>
               <p className="mt-3 font-display text-5xl tracking-wider text-foreground md:text-6xl">
-                28<span className="text-[var(--gold)]">.</span>06<span className="text-[var(--gold)]">.</span>2026
+                29<span className="text-[var(--gold)]">.</span>10<span className="text-[var(--gold)]">.</span>2026
               </p>
               <div className="mt-8"><Heart /></div>
               <div className="mt-10">
-                <CalendarJun2026 weekdays={t.weekdays} monthName={monthName} />
+                <CalendarOct2026 weekdays={t.weekdays} monthName={monthName} />
               </div>
               <p className="mt-6 text-xs tracking-[0.4em] text-muted-foreground">{t.startAt}</p>
             </div>
@@ -476,6 +749,18 @@ function Invitation() {
             </div>
           </Section>
 
+          {/* RSVP */}
+          <Section className="px-6 py-20">
+            <div className="mx-auto max-w-lg text-center">
+              <Ornament symbol="✉" />
+              <p className="mt-5 text-[11px] tracking-[0.4em] text-[var(--gold)]">{t.rsvp}</p>
+              <p className="mt-3 text-sm italic text-muted-foreground">{t.rsvpDesc}</p>
+              <div className="mt-8">
+                <RsvpForm t={t} onSubmit={addRsvp} />
+              </div>
+            </div>
+          </Section>
+
           {/* CLOSING */}
           <Section className="px-6 py-24">
             <div className="mx-auto max-w-xl text-center">
@@ -486,16 +771,47 @@ function Invitation() {
               </p>
               <div className="mt-10"><Heart /></div>
               <p className="mt-8 gold-text font-display text-4xl italic md:text-5xl">
-                Xasan & Dilfuza
+                Sherzod & Kumush
               </p>
-              <p className="mt-3 text-xs tracking-[0.4em] text-muted-foreground">28 · 06 · 2026</p>
+              <p className="mt-3 text-xs tracking-[0.4em] text-muted-foreground">29 · 10 · 2026</p>
             </div>
           </Section>
 
-          <footer className="border-t border-border/60 py-8 text-center text-xs tracking-widest text-muted-foreground">
-            ♡ Xasan & Dilfuza · 2026 ♡
+          <footer className="relative border-t border-border/60 py-10 text-center text-xs tracking-widest text-muted-foreground">
+            <p>♡ Sherzod & Kumush · 2026 ♡</p>
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <button
+                onClick={() => setAdminStage("gate")}
+                aria-label="Admin"
+                className="grid h-10 w-10 place-items-center rounded-full border border-[var(--gold)]/40 bg-card/70 text-[var(--gold)]/70 transition hover:border-[var(--gold)] hover:text-[var(--gold)]"
+                title="Admin"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <circle cx="8" cy="15" r="4"/>
+                  <path d="m10.85 12.15 8.15-8.15"/>
+                  <path d="m18 5 3 3"/>
+                  <path d="m15 8 3 3"/>
+                </svg>
+              </button>
+              <a
+                href={WI_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative inline-flex h-12 items-center justify-center rounded-full border-2 border-[var(--gold)] bg-gradient-to-br from-[var(--gold)] to-[oklch(0.72_0.14_70)] px-7 font-display text-base font-semibold tracking-[0.35em] text-[var(--primary-foreground)] shadow-[0_8px_30px_oklch(0.82_0.13_80/0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_oklch(0.82_0.13_80/0.6)] hover:scale-105"
+              >
+                <span className="pulse-soft absolute inset-0 rounded-full border border-[var(--gold)]/60" />
+                <span className="relative">WI</span>
+              </a>
+            </div>
           </footer>
         </div>
+      )}
+
+      {adminStage === "gate" && (
+        <AdminGate t={t} onClose={() => setAdminStage("closed")} onSuccess={() => setAdminStage("open")} />
+      )}
+      {adminStage === "open" && (
+        <AdminPanel t={t} onClose={() => setAdminStage("closed")} />
       )}
     </main>
   );
