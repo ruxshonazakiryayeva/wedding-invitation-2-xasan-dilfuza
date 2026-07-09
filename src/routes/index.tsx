@@ -8,8 +8,8 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Sherzod & Kumush — To'y taklifnomasi" },
       { name: "description", content: "29-oktabr 2026-yil, 18:00, Jasmin To'yxonasi. Sizni to'y marosimimizga taklif qilamiz." },
-      { property: "og:title", content: "Sherzod & Kumush" },
-      { property: "og:description", content: "29.10.2026 — Jasmin To'yxonasi" },
+      { property: "og:title", content: "Sherzod & Kumush — To'y taklifnomasi" },
+      { property: "og:description", content: "29-oktabr 2026-yil, 18:00, Jasmin To'yxonasi. Sizni to'y marosimimizga taklif qilamiz." },
       { property: "og:image", content: coupleAsset.url },
     ],
     links: [
