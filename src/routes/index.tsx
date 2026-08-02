@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import coupleAsset from "@/assets/couple.png.asset.json";
-import songAsset from "@/assets/song.mp3.asset.json";
+import coupleUrl from "@/assets/couple.png";
+import songUrl from "@/assets/song.m4a";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -10,7 +10,7 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "29-oktabr 2026-yil, 18:00, Jasmin To'yxonasi. Sizni to'y marosimimizga taklif qilamiz." },
       { property: "og:title", content: "Sherzod & Kumush — To'y taklifnomasi" },
       { property: "og:description", content: "29-oktabr 2026-yil, 18:00, Jasmin To'yxonasi. Sizni to'y marosimimizga taklif qilamiz." },
-      { property: "og:image", content: coupleAsset.url },
+      { property: "og:image", content: coupleUrl },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -571,7 +571,7 @@ function Invitation() {
 
   return (
     <main className="relative overflow-hidden bg-background text-foreground">
-      <audio ref={audioRef} src={songAsset.url} loop preload="auto" />
+      <audio ref={audioRef} src={songUrl} loop preload="auto" />
       <LangSwitch lang={lang} setLang={setLang} />
       <MusicToggle playing={playing} onToggle={togglePlay} />
       <Petals />
@@ -638,7 +638,7 @@ function Invitation() {
                 <div className="absolute -inset-3 rounded-[2rem] border border-[var(--gold)]/30" />
                 <div className="absolute -inset-1 rounded-[1.7rem] border border-[var(--gold)]/50" />
                 <img
-                  src={coupleAsset.url}
+                  src={coupleUrl}
                   alt="Sherzod & Kumush"
                   className="relative h-auto w-full rounded-[1.5rem] object-cover shadow-2xl"
                 />
