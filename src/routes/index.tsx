@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import coupleUrl from "@/assets/couple.png";
 import songUrl from "@/assets/song.m4a";
+import { supabase } from "@/lib/supabaseClient";
+
+const INVITATION_KEY = "sherzod_kumush";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -195,18 +198,33 @@ function useCountdown(enabled: boolean) {
   };
 }
 
-function loadRsvps(): RsvpEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(RSVP_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as RsvpEntry[]) : [];
-  } catch {
+async function loadRsvps(): Promise<RsvpEntry[]> {
+  const { data, error } = await supabase
+    .from("invitation_rsvp")
+    .select("*")
+    .eq("invitation", INVITATION_KEY)
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("[rsvp] load error", error);
     return [];
   }
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    attending: row.attendance === "yes" ? "yes" : "no",
+    guests: row.guests ?? 1,
+    createdAt: row.created_at,
+  }));
 }
 
-function saveRsvps(list: RsvpEntry[]) {
-  window.localStorage.setItem(RSVP_STORAGE_KEY, JSON.stringify(list));
+async function saveRsvp(entry: RsvpEntry) {
+  const { error } = await supabase.from("invitation_rsvp").insert({
+    invitation: INVITATION_KEY,
+    name: entry.name,
+    attendance: entry.attending,
+    guests: entry.guests,
+  });
+  if (error) console.error("[rsvp] insert error", error);
 }
 
 function Petals() {
@@ -435,7 +453,9 @@ function RsvpForm({ t, onSubmit }: { t: Record<string, string>; onSubmit: (e: Rs
 
 function AdminPanel({ t, onClose }: { t: Record<string, string>; onClose: () => void }) {
   const [entries, setEntries] = useState<RsvpEntry[]>([]);
-  useEffect(() => setEntries(loadRsvps()), []);
+  useEffect(() => {
+    loadRsvps().then(setEntries);
+  }, []);
   const totalGuests = entries.filter((e) => e.attending === "yes").reduce((a, b) => a + b.guests, 0);
 
   return (
@@ -543,12 +563,11 @@ function Invitation() {
   const [rsvps, setRsvps] = useState<RsvpEntry[]>([]);
   const [adminStage, setAdminStage] = useState<"closed" | "gate" | "open">("closed");
 
-  useEffect(() => { setRsvps(loadRsvps()); }, []);
+  useEffect(() => { loadRsvps().then(setRsvps); }, []);
 
   const addRsvp = (entry: RsvpEntry) => {
-    const next = [...rsvps, entry];
-    setRsvps(next);
-    saveRsvps(next);
+    setRsvps((prev) => [...prev, entry]);
+    saveRsvp(entry);
   };
 
   const togglePlay = () => {
