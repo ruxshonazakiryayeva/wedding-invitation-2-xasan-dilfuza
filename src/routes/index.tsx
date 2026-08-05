@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import coupleUrl from "@/assets/couple.png";
-import songUrl from "@/assets/song.m4a";
+import songUrl from "@/assets/song.mp4";
 import { supabase } from "@/lib/supabaseClient";
 
 const INVITATION_KEY = "sherzod_kumush";
